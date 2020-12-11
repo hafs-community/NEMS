@@ -27,6 +27,8 @@ CMEPS_ALL_OPTS=\
   CXX="$(CXX)" \
   INTERNAL_PIO_INIT=0
 
+$(info "CMEPS_ALL_OPTS = $(CMEPS_ALL_OPTS)")
+
 $(cmeps_mk): configure
 	$(MODULE_LOGIC) ; export $(CMEPS_ALL_OPTS)         ; \
 	set -e                                             ; \

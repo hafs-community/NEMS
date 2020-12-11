@@ -20,9 +20,6 @@ build_CDEPS_DOCN: $(cdeps_docn_mk)
 DOCN_ALL_FLAGS=\
   COMP_BINDIR="$(CDEPS_DOCN_BINDIR)"
 
-# Use CMEPS PIO build
-PIO_PATH?=$(ROOTDIR)/CMEPS/nems/lib/ParallelIO/install
-
 $(cdeps_docn_mk): $(cdeps_mk) configure
 	mkdir -p $(CDEPS_DOCN_BINDIR)
 	rm -f $(cdeps_docn_mk)
@@ -32,7 +29,7 @@ $(cdeps_docn_mk): $(cdeps_mk) configure
 	@echo "ESMF_DEP_FRONT     = ocn_comp_nuopc" >> $(cdeps_docn_mk)
 	@echo "ESMF_DEP_INCPATH   = " >> $(cdeps_docn_mk)
 	@echo "ESMF_DEP_CMPL_OBJS = " >> $(cdeps_docn_mk)
-	@echo "ESMF_DEP_LINK_OBJS = -L$(CDEPS_BINDIR)/lib -ldocn -ldshr -lstreams -lcdeps_share -lFoX_dom -lFoX_sax -lFoX_common -lFoX_utils -lFoX_fsys -L$(PIO_PATH)/lib -lpiof -lpioc" >> $(cdeps_docn_mk)
+	@echo "ESMF_DEP_LINK_OBJS = -L$(CDEPS_BINDIR)/lib -ldocn -ldshr -lstreams -lcdeps_share -lFoX_dom -lFoX_sax -lFoX_common -lFoX_utils -lFoX_fsys -L$(PIO_LIBDIR) -lpiof -lpioc" >> $(cdeps_docn_mk)
 
 	test -d "$(CDEPS_DOCN_BINDIR)"
 	test -s "$(cdeps_docn_mk)"

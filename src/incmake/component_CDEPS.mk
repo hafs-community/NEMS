@@ -30,10 +30,7 @@ CDEPS_ALL_OPTS=\
   CC="$(CC)" \
   CXX="$(CXX)"
 
-# Use CMEPS PIO build
-PIO_PATH?=$(ROOTDIR)/CMEPS/nems/lib/ParallelIO/install
-
-# Rule for building CDEPS using cmake build system, depends on CMEPS for PIO
+# Rule for building CDEPS using cmake build system
 $(cdeps_mk): $(cmeps_mk) configure
 	$(MODULE_LOGIC); export $(CDEPS_ALL_OPTS); \
 	set -e; $(MODULE_LOGIC); mkdir -p $(CDEPS_BLDDIR); \
@@ -44,10 +41,11 @@ $(cdeps_mk): $(cmeps_mk) configure
 	-DCMAKE_Fortran_COMPILER=$(FC) \
 	-DCMAKE_C_COMPILER=$(CC) \
 	-DCMAKE_CXX_COMPILER=$(CXX) \
-	-DPIO_Fortran_LIBRARY=$(PIO_PATH)/lib \
-	-DPIO_Fortran_INCLUDE_DIR=$(PIO_PATH)/include \
-	-DPIO_C_LIBRARY=$(PIO_PATH)/lib \
-	-DPIO_C_INCLUDE_DIR=$(PIO_PATH)/include ../
+        -DPIO=$(PIO_ROOT) \
+	-DPIO_Fortran_LIBRARY=$(PIO_LIBDIR) \
+	-DPIO_Fortran_INCLUDE_DIR=$(PIO_INC) \
+	-DPIO_C_LIBRARY=$(PIO_LIBDIR) \
+	-DPIO_C_INCLUDE_DIR=$(PIO_INC) ../
 	
 	$(MODULE_LOGIC); export $(CDEPS_ALL_OPTS); \
 	set -e; $(MODULE_LOGIC) ; cd $(CDEPS_BLDDIR); \
@@ -76,7 +74,7 @@ $(cdeps_mk): $(cmeps_mk) configure
 	@echo "ESMF_DEP_FRONT     = " >> $(CDEPS_BINDIR)/cdeps.mk
 	@echo "ESMF_DEP_INCPATH   = $(CDEPS_BINDIR)/include" >> $(CDEPS_BINDIR)/cdeps.mk
 	@echo "ESMF_DEP_CMPL_OBJS = " >> $(CDEPS_BINDIR)/cdeps.mk
-	@echo "ESMF_DEP_LINK_OBJS = -L$(CDEPS_BINDIR)/lib -ldshr -lstreams -lcdeps_share -lFoX_dom -lFoX_sax -lFoX_common -lFoX_utils -lFoX_fsys -L$(PIO_PATH)/lib -lpiof -lpioc" >> $(CDEPS_BINDIR)/cdeps.mk
+	@echo "ESMF_DEP_LINK_OBJS = -L$(CDEPS_BINDIR)/lib -ldshr -lstreams -lcdeps_share -lFoX_dom -lFoX_sax -lFoX_common -lFoX_utils -lFoX_fsys -L$(PIO_LIBDIR) -lpiof -lpioc" >> $(CDEPS_BINDIR)/cdeps.mk
 	
 	test -d "$(CDEPS_BINDIR)"
 	test -s "$(cdeps_mk)"

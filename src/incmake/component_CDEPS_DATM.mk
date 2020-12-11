@@ -20,9 +20,6 @@ build_CDEPS_DATM: $(cdeps_datm_mk)
 DATM_ALL_FLAGS=\
   COMP_BINDIR="$(CDEPS_DATM_BINDIR)"
 
-# Use CMEPS PIO build
-PIO_PATH?=$(ROOTDIR)/CMEPS/nems/lib/ParallelIO/install
-
 $(cdeps_datm_mk): $(cdeps_mk) configure
 	mkdir -p $(CDEPS_DATM_BINDIR)
 	rm -f $(cdeps_datm_mk)
@@ -32,7 +29,7 @@ $(cdeps_datm_mk): $(cdeps_mk) configure
 	@echo "ESMF_DEP_FRONT     = atm_comp_nuopc" >> $(cdeps_datm_mk)
 	@echo "ESMF_DEP_INCPATH   = " >> $(cdeps_datm_mk)
 	@echo "ESMF_DEP_CMPL_OBJS = " >> $(cdeps_datm_mk)
-	@echo "ESMF_DEP_LINK_OBJS = -L$(CDEPS_BINDIR)/lib -ldatm -ldshr -lstreams -lcdeps_share -lFoX_dom -lFoX_sax -lFoX_common -lFoX_utils -lFoX_fsys -L$(PIO_PATH)/lib -lpiof -lpioc" >> $(cdeps_datm_mk)
+	@echo "ESMF_DEP_LINK_OBJS = -L$(CDEPS_BINDIR)/lib -ldatm -ldshr -lstreams -lcdeps_share -lFoX_dom -lFoX_sax -lFoX_common -lFoX_utils -lFoX_fsys -L$(PIO_LIBDIR) -lpiof -lpioc" >> $(cdeps_datm_mk)
 
 	test -d "$(CDEPS_DATM_BINDIR)"
 	test -s "$(cdeps_datm_mk)"
