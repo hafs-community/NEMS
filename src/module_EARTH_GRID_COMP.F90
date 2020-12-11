@@ -293,7 +293,7 @@
       !TODO: absorbed the needed standard names into the default dictionary.
       ! -> 20 fields identified as exports by the GSM component
 #ifdef CMEPS
-      call NUOPC_FieldDictionarySetup("fd.yaml", rc=rc)
+      call NUOPC_FieldDictionarySetup("fd_nems.yaml", rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, &
           file=__FILE__)) &
