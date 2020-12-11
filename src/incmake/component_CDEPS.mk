@@ -89,4 +89,5 @@ clean_CDEPS:
 
 distclean_CDEPS: clean_CDEPS
 	rm -rf $(CDEPS_BINDIR)
+	rm -rf $(CDEPS_BLDDIR)
 	rm -f $(cdeps_mk)
