@@ -69,7 +69,9 @@
 !***  This module contains PIO initialization related routines.
 !-----------------------------------------------------------------------
 !
+#if defined PIO
        USE shr_pio_mod, ONLY: shr_pio_init1
+#endif
 !
 !-----------------------------------------------------------------------
 !
@@ -202,7 +204,9 @@
 !-----------------------------------------------------------------------
 !
       COMM_WORLD = MPI_COMM_WORLD
+#if defined PIO
       call shr_pio_init1(8, "pio_in", COMM_WORLD)
+#endif
 !
 !-----------------------------------------------------------------------
 !***  Set up the default log.

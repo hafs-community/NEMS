@@ -3381,7 +3381,7 @@
 #ifdef CMEPS
         use med_internalstate_mod , only : med_id
 #endif
-#if defined CMEPS && defined CDEPS
+#ifdef PIO
         use mpi, only : MPI_COMM_NULL
         use shr_pio_mod  , only : shr_pio_init2 
 #endif
@@ -3406,15 +3406,13 @@
         logical                         :: read_restart
         character(ESMF_MAXSTR)          :: cvalue
         character(len=5)                :: inst_suffix
-        logical                         :: isPresent
 #endif
-#if defined CMEPS && defined CDEPS
+        logical                         :: isPresent
         integer, allocatable            :: comms(:), comps(:)
         integer, allocatable            :: comp_comm_iam(:)
         logical, allocatable            :: comp_iamin(:)
-        type(ESMF_VM) :: vm
-        integer :: Global_Comm
-#endif
+        type(ESMF_VM)                   :: vm
+        integer                         :: Global_Comm
         rc = ESMF_SUCCESS
 
         ! query the Component for info
@@ -4015,19 +4013,23 @@
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 
-#ifdef CDEPS
           ! read and ingest free format component attributes
-          attrFF = NUOPC_FreeFormatCreate(config, &
-            label=trim(prefix)//"_modelio::", relaxedflag=.true., rc=rc)
+          call ESMF_ConfigFindNextLabel(config, &
+            label=trim(prefix)//"_modelio::", isPresent=isPresent, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-          call NUOPC_CompAttributeIngest(comp, attrFF, addFlag=.true., rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-          call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-#endif
+          if (isPresent) then
+            attrFF = NUOPC_FreeFormatCreate(config, &
+              label=trim(prefix)//"_modelio::", relaxedflag=.true., rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+            call NUOPC_CompAttributeIngest(comp, attrFF, addFlag=.true., rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+            call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+            if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+              line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+          endif
           
           ! clean-up
           deallocate(petList)
@@ -4041,7 +4043,7 @@
         call AddAttributes(comp, driver, config, i+1, trim(prefix), inst_suffix, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
+#endif
         if (ESMF_GridCompIsPetLocal(comp, rc=rc)) then
           call ESMF_GridCompGet(comp, vm=vm, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
@@ -4053,10 +4055,13 @@
 
           comp_iamin(i) = .true.
         else
+#ifdef PIO
           comms(i+1) = MPI_COMM_NULL
+#else
+          comms(i+1) = 0
+#endif
           comp_iamin(i) = .false.
         end if
-#endif          
         enddo
 
 #if ESMF_VERSION_MAJOR < 8
@@ -4067,14 +4072,18 @@
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
 
-#if defined CMEPS && defined CDEPS
+#if defined PIO
         ! Initialize PIO
         call shr_pio_init2(comps(2:), compLabels, comp_iamin, comms(2:), comp_comm_iam)
 #endif
 
         ! clean-up
         deallocate(compLabels)
-        
+        if (allocated(comms)) deallocate(comms)
+        if (allocated(comps)) deallocate(comps)
+        if (allocated(comp_iamin)) deallocate(comp_iamin)
+        if (allocated(comp_comm_iam)) deallocate(comp_comm_iam)
+
       end subroutine
 
   !-----------------------------------------------------------------------------
