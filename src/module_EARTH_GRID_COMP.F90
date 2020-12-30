@@ -4094,6 +4094,9 @@
     
     ! local variables
     character(ESMF_MAXSTR)          :: name
+    type(ESMF_CplComp), pointer     :: connectorList(:)
+    integer                         :: i
+    type(NUOPC_FreeFormat)          :: attrFF
 #if ESMF_VERSION_MAJOR >= 8
     type(ESMF_Config)               :: config
     type(NUOPC_FreeFormat)          :: runSeqFF
@@ -4120,6 +4123,26 @@
       autoAddConnectors=.true., rc=rc)
     if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
       line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+
+    ! read CONNECTOR attributes from config file into FreeFormat
+    attrFF = NUOPC_FreeFormatCreate(config, &
+      label="CONNECTOR_attributes::", relaxedflag=.true., rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+    nullify(connectorList)
+    call NUOPC_DriverGetComp(driver, compList=connectorList, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
+    do i=1, size(connectorList)
+      call NUOPC_CompAttributeIngest(connectorList(i), attrFF, &
+        addFlag=.true., rc=rc)
+      if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+        line=__LINE__, file=__FILE__)) return  ! bail out
+    enddo
+    deallocate(connectorList)
+    call NUOPC_FreeFormatDestroy(attrFF, rc=rc)
+    if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
+      line=__LINE__, file=__FILE__)) return  ! bail out
 #else
     ! access runSeq in the config
     call SetFromConfig(driver, mode="setRunSequence", rc=rc)
