@@ -3408,11 +3408,13 @@
         character(len=5)                :: inst_suffix
 #endif
         logical                         :: isPresent
-        integer, allocatable            :: comms(:), comps(:)
+        integer                         :: global_comm
+        integer, allocatable            :: comms(:)
+        integer, allocatable            :: comps(:)
         integer, allocatable            :: comp_comm_iam(:)
         logical, allocatable            :: comp_iamin(:)
+        logical, allocatable            :: uses_pio(:)
         type(ESMF_VM)                   :: vm
-        integer                         :: Global_Comm
         rc = ESMF_SUCCESS
 
         ! query the Component for info
@@ -3434,12 +3436,10 @@
         call ESMF_GridCompGet(driver, petCount=petCount, config=config, vm=vm, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-   
-        ! get MPI communicator    
-        call ESMF_VMGet(vm, mpiCommunicator=Global_Comm, rc=rc)
+        call ESMF_VMGet(vm, petCount=petCount, mpiCommunicator=global_comm, rc=rc)
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
- 
+   
         ! read and ingest free format driver attributes
         attrFF = NUOPC_FreeFormatCreate(config, label="EARTH_attributes::", &
           relaxedflag=.true., rc=rc)
@@ -3506,13 +3506,39 @@
 #endif
 
         ! allocate arrays required for PIO initialization (phase 2)
-        if (.not. allocated(comms)) allocate(comms(componentCount+1))
-        if (.not. allocated(comps)) allocate(comps(componentCount+1))
-        if (.not. allocated(comp_iamin)) allocate(comp_iamin(componentCount))
-        if (.not. allocated(comp_comm_iam)) allocate(comp_comm_iam(componentCount))
+        allocate(comms(componentCount+1), stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+          msg="Allocation of comms failed.", &
+          line=__LINE__, file=trim(name)//":"//__FILE__, rcToReturn=rc)) &
+          return  ! bail out
+        comms(1) = global_comm
+        comms(2:) = MPI_COMM_NULL
 
+        allocate(comps(componentCount+1), stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+          msg="Allocation of comps failed.", &
+          line=__LINE__, file=trim(name)//":"//__FILE__, rcToReturn=rc)) &
+          return  ! bail out
         comps(1) = 1
-        comms(1) = Global_Comm
+
+        allocate(comp_iamin(componentCount), stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+          msg="Allocation of comp_iamin failed.", &
+          line=__LINE__, file=trim(name)//":"//__FILE__, rcToReturn=rc)) &
+          return  ! bail out
+
+        allocate(comp_comm_iam(componentCount), stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+          msg="Allocation of comp_comm_iam failed.", &
+          line=__LINE__, file=trim(name)//":"//__FILE__, rcToReturn=rc)) &
+          return  ! bail out
+
+        allocate(uses_pio(componentCount), stat=stat)
+        if (ESMF_LogFoundAllocError(statusToCheck=stat, &
+          msg="Allocation of uses_pio failed.", &
+          line=__LINE__, file=trim(name)//":"//__FILE__, rcToReturn=rc)) &
+          return  ! bail out
+        uses_pio(:) = .false.
 
         ! determine information for each component and add to the driver
         do i=1, componentCount
@@ -3633,6 +3659,9 @@
               petList=petList, comp=comp, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+#if defined FRONT_CDEPS_DATM
+            uses_pio(i) = .true.
+#endif
 #else
             write (msg, *) "Model '", trim(model), "' was requested, "// &
               "but is not available in the executable!"
@@ -3724,6 +3753,7 @@
               petList=petList, comp=comp, rc=rc)
             if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
               line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
+            uses_pio(i) = .true.
 #else
             write (msg, *) "Model '", trim(model), "' was requested, "// &
               "but is not available in the executable!"
@@ -3982,6 +4012,7 @@
           elseif (trim(model) == "nems") then
 #ifdef CMEPS
             med_id = i+1
+            uses_pio(i) = .true.          
 #endif
             call NUOPC_DriverAddComp(driver, trim(prefix), MED_SS, &
               petList=petList, comp=comp, rc=rc)
@@ -4055,11 +4086,7 @@
 
           comp_iamin(i) = .true.
         else
-#ifdef PIO
           comms(i+1) = MPI_COMM_NULL
-#else
-          comms(i+1) = 0
-#endif
           comp_iamin(i) = .false.
         end if
         enddo
@@ -4073,16 +4100,17 @@
 #endif
 
 #if defined PIO
-        ! Initialize PIO
-        call shr_pio_init2(comps(2:), compLabels, comp_iamin, comms(2:), comp_comm_iam)
+        ! Initialize PIO (2nd phase)
+        call shr_pio_init2(comps(2:), compLabels, comp_iamin, comms(2:), comp_comm_iam, comp_with_pio=uses_pio)
 #endif
 
         ! clean-up
         deallocate(compLabels)
-        if (allocated(comms)) deallocate(comms)
-        if (allocated(comps)) deallocate(comps)
-        if (allocated(comp_iamin)) deallocate(comp_iamin)
-        if (allocated(comp_comm_iam)) deallocate(comp_comm_iam)
+        deallocate(comms)
+        deallocate(comps)
+        deallocate(comp_iamin)
+        deallocate(comp_comm_iam)
+        deallocate(uses_pio)
 
       end subroutine
 
