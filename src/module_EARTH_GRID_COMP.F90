@@ -4830,6 +4830,7 @@
             file=__FILE__)) &
             return  ! bail out
        else
+          print*, trim(attrList(n))
           call NUOPC_CompAttributeGet(driver, name=trim(attrList(n)), value=cvalue, rc=rc)
           if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
             line=__LINE__, &
