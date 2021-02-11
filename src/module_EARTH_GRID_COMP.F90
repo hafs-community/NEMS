@@ -3512,7 +3512,9 @@
           line=__LINE__, file=trim(name)//":"//__FILE__, rcToReturn=rc)) &
           return  ! bail out
         comms(1) = global_comm
+#ifdef PIO
         comms(2:) = MPI_COMM_NULL
+#endif
 
         allocate(comps(componentCount+1), stat=stat)
         if (ESMF_LogFoundAllocError(statusToCheck=stat, &
@@ -4086,7 +4088,9 @@
 
           comp_iamin(i) = .true.
         else
+#ifdef PIO
           comms(i+1) = MPI_COMM_NULL
+#endif
           comp_iamin(i) = .false.
         end if
         enddo
