@@ -3381,10 +3381,6 @@
 #ifdef CMEPS
         use med_internalstate_mod , only : med_id
 #endif
-#ifdef PIO
-        use mpi, only : MPI_COMM_NULL
-        use shr_pio_mod  , only : shr_pio_init2 
-#endif
         type(ESMF_GridComp)  :: driver
         integer, intent(out) :: rc
 
@@ -3408,11 +3404,7 @@
         character(len=5)                :: inst_suffix
 #endif
         logical                         :: isPresent
-        integer, allocatable            :: comms(:), comps(:)
-        integer, allocatable            :: comp_comm_iam(:)
-        logical, allocatable            :: comp_iamin(:)
         type(ESMF_VM)                   :: vm
-        integer                         :: Global_Comm
         rc = ESMF_SUCCESS
 
         ! query the Component for info
@@ -3435,11 +3427,6 @@
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
    
-        ! get MPI communicator    
-        call ESMF_VMGet(vm, mpiCommunicator=Global_Comm, rc=rc)
-        if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-          line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
- 
         ! read and ingest free format driver attributes
         attrFF = NUOPC_FreeFormatCreate(config, label="EARTH_attributes::", &
           relaxedflag=.true., rc=rc)
@@ -3505,19 +3492,8 @@
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
 
-        ! allocate arrays required for PIO initialization (phase 2)
-        if (.not. allocated(comms)) allocate(comms(componentCount+1))
-        if (.not. allocated(comps)) allocate(comps(componentCount+1))
-        if (.not. allocated(comp_iamin)) allocate(comp_iamin(componentCount))
-        if (.not. allocated(comp_comm_iam)) allocate(comp_comm_iam(componentCount))
-
-        comps(1) = 1
-        comms(1) = Global_Comm
-
         ! determine information for each component and add to the driver
         do i=1, componentCount
-          comps(i+1) = i+1
-
           ! construct component prefix
           prefix=trim(compLabels(i))
           ! read in petList bounds
@@ -4044,24 +4020,6 @@
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
-        if (ESMF_GridCompIsPetLocal(comp, rc=rc)) then
-          call ESMF_GridCompGet(comp, vm=vm, rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
-          call ESMF_VMGet(vm, mpiCommunicator=comms(i+1), localPet=comp_comm_iam(i), rc=rc)
-          if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
-            line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
-
-          comp_iamin(i) = .true.
-        else
-#ifdef PIO
-          comms(i+1) = MPI_COMM_NULL
-#else
-          comms(i+1) = 0
-#endif
-          comp_iamin(i) = .false.
-        end if
         enddo
 
 #if ESMF_VERSION_MAJOR < 8
@@ -4071,18 +4029,8 @@
         if (ESMF_LogFoundError(rcToCheck=rc, msg=ESMF_LOGERR_PASSTHRU, &
           line=__LINE__, file=trim(name)//":"//__FILE__)) return  ! bail out
 #endif
-
-#if defined PIO
-        ! Initialize PIO
-        call shr_pio_init2(comps(2:), compLabels, comp_iamin, comms(2:), comp_comm_iam)
-#endif
-
         ! clean-up
         deallocate(compLabels)
-        if (allocated(comms)) deallocate(comms)
-        if (allocated(comps)) deallocate(comps)
-        if (allocated(comp_iamin)) deallocate(comp_iamin)
-        if (allocated(comp_comm_iam)) deallocate(comp_comm_iam)
 
       end subroutine
 
